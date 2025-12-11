@@ -29,7 +29,19 @@ export default function LoginPage() {
         router.refresh();
       }
     } catch (err: any) {
-      setError(err.message || "ログインに失敗しました");
+      let errorMessage = "ログインに失敗しました";
+      
+      if (err.message) {
+        if (err.message.includes("Invalid login credentials")) {
+          errorMessage = "メールアドレスまたはパスワードが正しくありません。";
+        } else if (err.message.includes("Email not confirmed")) {
+          errorMessage = "メールアドレスの確認が完了していません。確認メールをチェックしてください。";
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

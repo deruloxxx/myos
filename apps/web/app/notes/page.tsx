@@ -1,6 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { supabase } from "@/lib/supabaseClient";
 
 // 仮データ
 const mockNotes = [
@@ -22,6 +25,51 @@ const mockNotes = [
 ];
 
 export default function NotesPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const checkAuth = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        router.push("/login");
+        return;
+      }
+
+      setLoading(false);
+    };
+
+    checkAuth();
+
+    // 認証状態の変更を監視
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        router.push("/login");
+      } else {
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [router]);
+
+  // クライアントサイドでのみレンダリング
+  if (!mounted || loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-black">
+        <div className="text-zinc-600 dark:text-zinc-400">読み込み中...</div>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
       {/* ヘッダー */}
