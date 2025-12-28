@@ -99,6 +99,17 @@ export default function NotesPage() {
             >
               設定
             </Link>
+            <button
+              onClick={async () => {
+                if (confirm("ログアウトしますか？")) {
+                  await supabase.auth.signOut();
+                  router.push("/login");
+                }
+              }}
+              className="px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+            >
+              ログアウト
+            </button>
           </div>
         </div>
       </header>

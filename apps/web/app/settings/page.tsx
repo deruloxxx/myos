@@ -1,15 +1,46 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [email] = useState("user@example.com"); // 仮データ
+  const [email, setEmail] = useState<string>("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogout = () => {
-    // 仮実装：後でログアウト機能を実装
-    alert("ログアウト機能は後で実装します");
+  useEffect(() => {
+    const fetchUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user?.email) {
+        setEmail(user.email);
+      }
+    };
+    fetchUser();
+  }, []);
+
+  const handleLogout = async () => {
+    if (!confirm("ログアウトしますか？")) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        throw error;
+      }
+      router.push("/login");
+    } catch (err: any) {
+      console.error("Logout error:", err);
+      alert("ログアウトに失敗しました");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleThemeChange = (newTheme: "light" | "dark") => {
@@ -87,9 +118,10 @@ export default function SettingsPage() {
             </h3>
             <button
               onClick={handleLogout}
-              className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"
+              disabled={loading}
+              className="px-6 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-medium rounded-lg transition-colors"
             >
-              ログアウト
+              {loading ? "ログアウト中..." : "ログアウト"}
             </button>
           </section>
         </div>

@@ -10,7 +10,6 @@ export default function NewNotePage() {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [summary, setSummary] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +34,6 @@ export default function NewNotePage() {
         title,
         content,
         userId: user.id,
-        summary: summary || null,
       };
 
       // スネークケースに変換してSupabaseに送信
@@ -43,7 +41,6 @@ export default function NewNotePage() {
         title: noteData.title,
         content: noteData.content,
         user_id: noteData.userId,
-        summary: noteData.summary || "",
       });
 
       if (insertError) {
@@ -66,12 +63,25 @@ export default function NewNotePage() {
       <header className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-xl font-bold text-black dark:text-zinc-50">MyOS</h1>
-          <Link
-            href="/notes"
-            className="px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50"
-          >
-            一覧に戻る
-          </Link>
+          <div className="flex gap-2">
+            <Link
+              href="/notes"
+              className="px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50"
+            >
+              一覧に戻る
+            </Link>
+            <button
+              onClick={async () => {
+                if (confirm("ログアウトしますか？")) {
+                  await supabase.auth.signOut();
+                  router.push("/login");
+                }
+              }}
+              className="px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+            >
+              ログアウト
+            </button>
+          </div>
         </div>
       </header>
 
@@ -117,23 +127,6 @@ export default function NewNotePage() {
               rows={15}
               className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 resize-none"
               placeholder="メモの内容を入力してください..."
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="summary"
-              className="block text-sm font-medium mb-2 text-zinc-700 dark:text-zinc-300"
-            >
-              要約（任意）
-            </label>
-            <textarea
-              id="summary"
-              value={summary}
-              onChange={(e) => setSummary(e.target.value)}
-              rows={3}
-              className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 resize-none"
-              placeholder="メモの要約を入力してください（任意）..."
             />
           </div>
 

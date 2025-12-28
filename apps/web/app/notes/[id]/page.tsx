@@ -10,7 +10,6 @@ interface Note {
   title: string;
   content: string;
   created_at: string;
-  summary?: string | null;
 }
 
 export default function NoteDetailPage() {
@@ -223,12 +222,25 @@ export default function NoteDetailPage() {
       <header className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-xl font-bold text-black dark:text-zinc-50">MyOS</h1>
-          <Link
-            href="/notes"
-            className="px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50"
-          >
-            一覧に戻る
-          </Link>
+          <div className="flex gap-2">
+            <Link
+              href="/notes"
+              className="px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50"
+            >
+              一覧に戻る
+            </Link>
+            <button
+              onClick={async () => {
+                if (confirm("ログアウトしますか？")) {
+                  await supabase.auth.signOut();
+                  router.push("/login");
+                }
+              }}
+              className="px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+            >
+              ログアウト
+            </button>
+          </div>
         </div>
       </header>
 
