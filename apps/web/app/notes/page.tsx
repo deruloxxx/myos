@@ -5,46 +5,53 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 
-// 仮データ
-const mockNotes = [
-  {
-    id: "1",
-    title: "今日のタスク",
-    createdAt: "2024-12-11",
-  },
-  {
-    id: "2",
-    title: "プロジェクトのアイデア",
-    createdAt: "2024-12-10",
-  },
-  {
-    id: "3",
-    title: "読書メモ",
-    createdAt: "2024-12-09",
-  },
-];
+interface Note {
+  id: string;
+  title: string;
+  created_at: string;
+}
 
 export default function NotesPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
-    const checkAuth = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+    const fetchNotes = async () => {
+      try {
+        // 認証チェック
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-      if (!session) {
-        router.push("/login");
-        return;
+        if (!session) {
+          router.push("/login");
+          return;
+        }
+
+        // メモ一覧を取得
+        const { data, error: fetchError } = await supabase
+          .from("notes")
+          .select("id,title,created_at")
+          .order("created_at", { ascending: false });
+
+        if (fetchError) {
+          throw fetchError;
+        }
+
+        setNotes(data || []);
+      } catch (err: any) {
+        console.error("Fetch notes error:", err);
+        setError(err.message || "メモの取得に失敗しました");
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
 
-    checkAuth();
+    fetchNotes();
 
     // 認証状態の変更を監視
     const {
@@ -53,7 +60,7 @@ export default function NotesPage() {
       if (!session) {
         router.push("/login");
       } else {
-        setLoading(false);
+        fetchNotes();
       }
     });
 
@@ -61,6 +68,15 @@ export default function NotesPage() {
       subscription.unsubscribe();
     };
   }, [router]);
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("ja-JP", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
 
   // クライアントサイドでのみレンダリング
   if (!mounted || loading) {
@@ -99,9 +115,15 @@ export default function NotesPage() {
           </Link>
         </div>
 
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-400 rounded">
+            {error}
+          </div>
+        )}
+
         {/* メモ一覧 */}
         <div className="space-y-3">
-          {mockNotes.map((note) => (
+          {notes.map((note) => (
             <Link
               key={note.id}
               href={`/notes/${note.id}`}
@@ -110,12 +132,14 @@ export default function NotesPage() {
               <h3 className="text-lg font-semibold text-black dark:text-zinc-50 mb-1">
                 {note.title}
               </h3>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">{note.createdAt}</p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                {formatDate(note.created_at)}
+              </p>
             </Link>
           ))}
         </div>
 
-        {mockNotes.length === 0 && (
+        {notes.length === 0 && !loading && (
           <div className="text-center py-12">
             <p className="text-zinc-500 dark:text-zinc-400">メモがありません</p>
             <Link

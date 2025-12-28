@@ -1,25 +1,77 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
 
-// 仮データ
-const mockNote = {
-  id: "1",
-  title: "今日のタスク",
-  content: `これはメモの本文です。
-長い文章を書くことができます。
-
-複数行にわたって書くことも可能です。
-後でAI要約機能を追加する予定です。`,
-  createdAt: "2024-12-11",
-};
+interface Note {
+  id: string;
+  title: string;
+  content: string;
+  created_at: string;
+}
 
 export default function NoteDetailPage() {
+  const router = useRouter();
   const params = useParams();
+  const noteId = params.id as string;
+  const [note, setNote] = useState<Note | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  useEffect(() => {
+    const fetchNote = async () => {
+      try {
+        // 認証チェック
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session) {
+          router.push("/login");
+          return;
+        }
+
+        // メモ詳細を取得
+        const { data, error: fetchError } = await supabase
+          .from("notes")
+          .select("*")
+          .eq("id", noteId)
+          .single();
+
+        if (fetchError) {
+          throw fetchError;
+        }
+
+        if (!data) {
+          throw new Error("メモが見つかりません");
+        }
+
+        setNote(data);
+      } catch (err: any) {
+        console.error("Fetch note error:", err);
+        setError(err.message || "メモの取得に失敗しました");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (noteId) {
+      fetchNote();
+    }
+  }, [noteId, router]);
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("ja-JP", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
 
   const handleGenerateSummary = () => {
     setIsGenerating(true);
@@ -47,22 +99,53 @@ export default function NoteDetailPage() {
 
       {/* メインコンテンツ */}
       <main className="max-w-4xl mx-auto px-4 py-8">
-        {/* タイトル */}
-        <h2 className="text-3xl font-bold mb-2 text-black dark:text-zinc-50">
-          {mockNote.title}
-        </h2>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
-          {mockNote.createdAt}
-        </p>
-
-        {/* 本文 */}
-        <div className="mb-8">
-          <div className="prose dark:prose-invert max-w-none">
-            <p className="whitespace-pre-wrap text-zinc-700 dark:text-zinc-300 leading-relaxed">
-              {mockNote.content}
-            </p>
+        {loading && (
+          <div className="text-center py-12">
+            <p className="text-zinc-600 dark:text-zinc-400">読み込み中...</p>
           </div>
-        </div>
+        )}
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-400 rounded">
+            {error}
+          </div>
+        )}
+
+        {note && (
+          <>
+            {/* タイトル */}
+            <h2 className="text-3xl font-bold mb-2 text-black dark:text-zinc-50">
+              {note.title}
+            </h2>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
+              {formatDate(note.created_at)}
+            </p>
+
+            {/* 本文 */}
+            <div className="mb-8">
+              <div className="prose dark:prose-invert max-w-none">
+                <p className="whitespace-pre-wrap text-zinc-700 dark:text-zinc-300 leading-relaxed">
+                  {note.content || "（本文なし）"}
+                </p>
+              </div>
+            </div>
+          </>
+        )}
+
+        {!loading && !note && !error && (
+          <div className="text-center py-12">
+            <p className="text-zinc-500 dark:text-zinc-400">メモが見つかりません</p>
+            <Link
+              href="/notes"
+              className="mt-4 inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+            >
+              一覧に戻る
+            </Link>
+          </div>
+        )}
+
+        {note && (
+          <>
 
         {/* 区切り線 */}
         <hr className="border-zinc-200 dark:border-zinc-800 my-8" />
@@ -103,15 +186,17 @@ export default function NoteDetailPage() {
           </div>
         </div>
 
-        {/* アクションボタン */}
-        <div className="flex gap-3">
-          <button className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
-            編集
-          </button>
-          <button className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors">
-            削除
-          </button>
-        </div>
+            {/* アクションボタン */}
+            <div className="flex gap-3">
+              <button className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
+                編集
+              </button>
+              <button className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors">
+                削除
+              </button>
+            </div>
+          </>
+        )}
       </main>
     </div>
   );

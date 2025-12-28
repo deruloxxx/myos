@@ -1,17 +1,63 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { supabase } from "@/lib/supabaseClient";
+import type { NoteInsert } from "@/lib/types";
 
 export default function NewNotePage() {
+  const router = useRouter();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [summary, setSummary] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    // 仮実装：後でDB保存を実装
-    console.log("保存:", { title, content });
-    alert("保存機能は後で実装します");
+    setLoading(true);
+    setError(null);
+
+    try {
+      // ユーザーIDを取得
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        throw new Error("ログインが必要です");
+      }
+
+      // NoteInsert型でデータを準備
+      const noteData: NoteInsert = {
+        title,
+        content,
+        userId: user.id,
+        summary: summary || null,
+      };
+
+      // スネークケースに変換してSupabaseに送信
+      const { error: insertError } = await supabase.from("notes").insert({
+        title: noteData.title,
+        content: noteData.content,
+        user_id: noteData.userId,
+        summary: noteData.summary || "",
+      });
+
+      if (insertError) {
+        throw insertError;
+      }
+
+      // 保存成功後、一覧ページにリダイレクト
+      router.push("/notes");
+    } catch (err: any) {
+      console.error("Save error:", err);
+      setError(err.message || "保存に失敗しました");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -32,6 +78,12 @@ export default function NewNotePage() {
       {/* メインコンテンツ */}
       <main className="max-w-4xl mx-auto px-4 py-8">
         <h2 className="text-2xl font-bold mb-6 text-black dark:text-zinc-50">新規メモ作成</h2>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-400 rounded">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSave} className="space-y-6">
           <div>
@@ -68,12 +120,30 @@ export default function NewNotePage() {
             />
           </div>
 
+          <div>
+            <label
+              htmlFor="summary"
+              className="block text-sm font-medium mb-2 text-zinc-700 dark:text-zinc-300"
+            >
+              要約（任意）
+            </label>
+            <textarea
+              id="summary"
+              value={summary}
+              onChange={(e) => setSummary(e.target.value)}
+              rows={3}
+              className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 resize-none"
+              placeholder="メモの要約を入力してください（任意）..."
+            />
+          </div>
+
           <div className="flex gap-3">
             <button
               type="submit"
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+              disabled={loading}
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-lg transition-colors"
             >
-              保存
+              {loading ? "保存中..." : "保存"}
             </button>
             <Link
               href="/notes"
