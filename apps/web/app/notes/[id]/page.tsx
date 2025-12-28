@@ -21,6 +21,12 @@ export default function NoteDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const fetchNote = async () => {
@@ -51,6 +57,8 @@ export default function NoteDetailPage() {
         }
 
         setNote(data);
+        setEditTitle(data.title);
+        setEditContent(data.content || "");
       } catch (err: any) {
         console.error("Fetch note error:", err);
         setError(err.message || "メモの取得に失敗しました");
@@ -64,6 +72,71 @@ export default function NoteDetailPage() {
     }
   }, [noteId, router]);
 
+  const handleEdit = () => {
+    if (note) {
+      setEditTitle(note.title);
+      setEditContent(note.content || "");
+      setIsEditing(true);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    if (note) {
+      setEditTitle(note.title);
+      setEditContent(note.content || "");
+      setIsEditing(false);
+      setSaveSuccess(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!note) return;
+
+    setSaving(true);
+    setError(null);
+    setSaveSuccess(false);
+
+    try {
+      const { error: updateError } = await supabase
+        .from("notes")
+        .update({
+          title: editTitle,
+          content: editContent,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", noteId);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // 更新されたデータを再取得
+      const { data: updatedNote, error: fetchError } = await supabase
+        .from("notes")
+        .select("*")
+        .eq("id", noteId)
+        .single();
+
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      setNote(updatedNote);
+      setSaveSuccess(true);
+      setIsEditing(false);
+
+      // 3秒後に成功メッセージを消す
+      setTimeout(() => {
+        setSaveSuccess(false);
+      }, 3000);
+    } catch (err: any) {
+      console.error("Update error:", err);
+      setError(err.message || "保存に失敗しました");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("ja-JP", {
@@ -71,6 +144,36 @@ export default function NoteDetailPage() {
       month: "long",
       day: "numeric",
     });
+  };
+
+  const handleDelete = async () => {
+    if (!note) return;
+
+    // 確認ダイアログ
+    if (!confirm("本当にこのメモを削除しますか？")) {
+      return;
+    }
+
+    setDeleting(true);
+    setError(null);
+
+    try {
+      const { error: deleteError } = await supabase
+        .from("notes")
+        .delete()
+        .eq("id", noteId);
+
+      if (deleteError) {
+        throw deleteError;
+      }
+
+      // 削除成功後、一覧ページにリダイレクト
+      router.push("/notes");
+    } catch (err: any) {
+      console.error("Delete error:", err);
+      setError(err.message || "削除に失敗しました");
+      setDeleting(false);
+    }
   };
 
   const handleGenerateSummary = () => {
@@ -111,24 +214,87 @@ export default function NoteDetailPage() {
           </div>
         )}
 
+        {saveSuccess && (
+          <div className="mb-4 p-3 bg-green-100 dark:bg-green-900/30 border border-green-400 dark:border-green-800 text-green-700 dark:text-green-400 rounded">
+            保存しました
+          </div>
+        )}
+
         {note && (
           <>
-            {/* タイトル */}
-            <h2 className="text-3xl font-bold mb-2 text-black dark:text-zinc-50">
-              {note.title}
-            </h2>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
-              {formatDate(note.created_at)}
-            </p>
+            {isEditing ? (
+              /* 編集モード */
+              <div className="space-y-6">
+                <div>
+                  <label
+                    htmlFor="edit-title"
+                    className="block text-sm font-medium mb-2 text-zinc-700 dark:text-zinc-300"
+                  >
+                    タイトル
+                  </label>
+                  <input
+                    id="edit-title"
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 text-2xl font-bold"
+                  />
+                </div>
 
-            {/* 本文 */}
-            <div className="mb-8">
-              <div className="prose dark:prose-invert max-w-none">
-                <p className="whitespace-pre-wrap text-zinc-700 dark:text-zinc-300 leading-relaxed">
-                  {note.content || "（本文なし）"}
-                </p>
+                <div>
+                  <label
+                    htmlFor="edit-content"
+                    className="block text-sm font-medium mb-2 text-zinc-700 dark:text-zinc-300"
+                  >
+                    本文
+                  </label>
+                  <textarea
+                    id="edit-content"
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    rows={15}
+                    className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 resize-none"
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-lg transition-colors"
+                  >
+                    {saving ? "保存中..." : "保存"}
+                  </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    disabled={saving}
+                    className="px-6 py-2 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 font-medium rounded-lg transition-colors"
+                  >
+                    キャンセル
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              /* 表示モード */
+              <>
+                {/* タイトル */}
+                <h2 className="text-3xl font-bold mb-2 text-black dark:text-zinc-50">
+                  {note.title}
+                </h2>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
+                  {formatDate(note.created_at)}
+                </p>
+
+                {/* 本文 */}
+                <div className="mb-8">
+                  <div className="prose dark:prose-invert max-w-none">
+                    <p className="whitespace-pre-wrap text-zinc-700 dark:text-zinc-300 leading-relaxed">
+                      {note.content || "（本文なし）"}
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
           </>
         )}
 
@@ -186,15 +352,24 @@ export default function NoteDetailPage() {
           </div>
         </div>
 
-            {/* アクションボタン */}
-            <div className="flex gap-3">
-              <button className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
-                編集
-              </button>
-              <button className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors">
-                削除
-              </button>
-            </div>
+            {!isEditing && (
+              /* アクションボタン（表示モードのみ） */
+              <div className="flex gap-3">
+                <button
+                  onClick={handleEdit}
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+                >
+                  編集
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="px-6 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-medium rounded-lg transition-colors"
+                >
+                  {deleting ? "削除中..." : "削除"}
+                </button>
+              </div>
+            )}
           </>
         )}
       </main>
