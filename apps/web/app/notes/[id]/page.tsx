@@ -20,8 +20,8 @@ export default function NoteDetailPage() {
   const [note, setNote] = useState<Note | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [aiSummary, setAiSummary] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [translatedText, setTranslatedText] = useState<string | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
@@ -60,7 +60,6 @@ export default function NoteDetailPage() {
         setNote(data);
         setEditTitle(data.title);
         setEditContent(data.content || "");
-        setAiSummary(data.summary || null);
       } catch (err: any) {
         console.error("Fetch note error:", err);
         setError(err.message || "メモの取得に失敗しました");
@@ -178,10 +177,10 @@ export default function NoteDetailPage() {
     }
   };
 
-  const handleGenerateSummary = async () => {
+  const handleTranslate = async () => {
     if (!note) return;
 
-    setIsGenerating(true);
+    setIsTranslating(true);
     setError(null);
 
     try {
@@ -195,7 +194,7 @@ export default function NoteDetailPage() {
       }
 
       // APIを呼び出し
-      const response = await fetch(`/api/notes/${noteId}/summarize`, {
+      const response = await fetch(`/api/notes/${noteId}/translate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -205,29 +204,16 @@ export default function NoteDetailPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "要約の生成に失敗しました");
+        throw new Error(errorData.error || "翻訳に失敗しました");
       }
 
       const result = await response.json();
-
-      // 成功したらメモを再取得してstateを更新
-      const { data: updatedNote, error: fetchError } = await supabase
-        .from("notes")
-        .select("*")
-        .eq("id", noteId)
-        .single();
-
-      if (fetchError) {
-        throw fetchError;
-      }
-
-      setNote(updatedNote);
-      setAiSummary(result.summary);
+      setTranslatedText(result.translatedText);
     } catch (err: any) {
-      console.error("Generate summary error:", err);
-      setError(err.message || "要約の生成に失敗しました");
+      console.error("Translate error:", err);
+      setError(err.message || "翻訳に失敗しました");
     } finally {
-      setIsGenerating(false);
+      setIsTranslating(false);
     }
   };
 
@@ -362,29 +348,29 @@ export default function NoteDetailPage() {
         {/* 区切り線 */}
         <hr className="border-zinc-200 dark:border-zinc-800 my-8" />
 
-        {/* AI要約セクション */}
+        {/* 翻訳セクション */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-semibold text-black dark:text-zinc-50">AI要約</h3>
+            <h3 className="text-xl font-semibold text-black dark:text-zinc-50">翻訳</h3>
             <button
-              onClick={handleGenerateSummary}
-              disabled={isGenerating}
+              onClick={handleTranslate}
+              disabled={isTranslating}
               className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-medium rounded-lg transition-colors"
             >
-              {isGenerating ? "生成中..." : "AI要約する"}
+              {isTranslating ? "翻訳中..." : "翻訳する"}
             </button>
           </div>
 
-          {note.summary || aiSummary ? (
+          {translatedText ? (
             <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-              <p className="text-zinc-700 dark:text-zinc-300">
-                {note.summary || aiSummary}
+              <p className="text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">
+                {translatedText}
               </p>
             </div>
           ) : (
             <div className="p-4 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg">
               <p className="text-zinc-500 dark:text-zinc-400 text-sm">
-                AI要約を生成すると、メモの内容を要約して表示します。
+                翻訳ボタンをクリックすると、メモの内容を英語に翻訳します。
               </p>
             </div>
           )}
