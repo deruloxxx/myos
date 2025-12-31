@@ -3,9 +3,12 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import LoginPage from '@/app/login/page';
 
-// Next.jsのrouterをモック
-const mockPush = vi.fn();
-const mockRefresh = vi.fn();
+// vi.hoisted()を使用してモック変数をホイスト
+const { mockPush, mockRefresh, mockSignInWithPassword } = vi.hoisted(() => ({
+  mockPush: vi.fn(),
+  mockRefresh: vi.fn(),
+  mockSignInWithPassword: vi.fn(),
+}));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -13,9 +16,6 @@ vi.mock('next/navigation', () => ({
     refresh: mockRefresh,
   }),
 }));
-
-// Supabaseクライアントをモック
-const mockSignInWithPassword = vi.fn();
 
 vi.mock('@/lib/supabaseClient', () => ({
   supabase: {
@@ -33,7 +33,7 @@ describe('LoginPage', () => {
   it('should render login form', () => {
     render(<LoginPage />);
 
-    expect(screen.getByText('ログイン')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'ログイン' })).toBeInTheDocument();
     expect(screen.getByLabelText('メールアドレス')).toBeInTheDocument();
     expect(screen.getByLabelText('パスワード')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'ログイン' })).toBeInTheDocument();

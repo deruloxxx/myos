@@ -5,7 +5,7 @@ test.describe('Home Page', () => {
     await page.goto('/');
     
     // ページタイトルを確認
-    await expect(page).toHaveTitle(/MyOS/);
+    await expect(page).toHaveTitle(/Create Next App/);
   });
 });
 

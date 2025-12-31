@@ -3,8 +3,12 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SettingsPage from '@/app/settings/page';
 
-// Next.jsのrouterをモック
-const mockPush = vi.fn();
+// vi.hoisted()を使用してモック変数をホイスト
+const { mockPush, mockGetUser, mockSignOut } = vi.hoisted(() => ({
+  mockPush: vi.fn(),
+  mockGetUser: vi.fn(),
+  mockSignOut: vi.fn(),
+}));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -14,10 +18,6 @@ vi.mock('next/navigation', () => ({
     <a href={href}>{children}</a>
   ),
 }));
-
-// Supabaseクライアントをモック
-const mockGetUser = vi.fn();
-const mockSignOut = vi.fn();
 
 vi.mock('@/lib/supabaseClient', () => ({
   supabase: {
