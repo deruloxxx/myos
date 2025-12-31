@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const noteId = params.id;
+    const resolvedParams = await params;
+    const noteId = resolvedParams.id;
 
     // ダミー実装：認証やDBアクセスをスキップして、常に成功レスポンスを返す
     // 少し遅延を入れてAPI呼び出しをシミュレート
