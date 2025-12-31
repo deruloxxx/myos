@@ -9,11 +9,21 @@ if (process.env.NODE_ENV === "development") {
   console.log("Supabase Anon Key:", supabaseAnonKey ? "SET" : "NOT SET");
 }
 
+// クライアントコンポーネントで使用されるため、ビルド時には評価されない
+// 実行時に環境変数が設定されていない場合はエラーを投げる
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    "Missing Supabase environment variables. Please check your .env.local file."
-  );
+  // ビルド時にはエラーを出さない（クライアントサイドでのみエラー）
+  if (typeof window !== "undefined") {
+    throw new Error(
+      "Missing Supabase environment variables. Please check your .env.local file."
+    );
+  }
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// 型安全性のため、非nullアサーションを使用
+// 実際の実行時には上記のチェックでエラーが発生する
+export const supabase = createClient(
+  supabaseUrl!,
+  supabaseAnonKey!
+);
 
