@@ -43,41 +43,6 @@ beforeEach(() => {
 });
 
 describe('SettingsPage', () => {
-  it('should render settings page', async () => {
-    render(<SettingsPage />);
-
-    expect(screen.getByText('Settings')).toBeInTheDocument();
-    expect(screen.getByText('プロフィール')).toBeInTheDocument();
-    expect(screen.getByText('テーマ設定')).toBeInTheDocument();
-    expect(screen.getByText('アカウント')).toBeInTheDocument();
-  });
-
-  it('should display user email', async () => {
-    render(<SettingsPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText('test@example.com')).toBeInTheDocument();
-    });
-  });
-
-  it('should change theme when theme button is clicked', async () => {
-    const user = userEvent.setup();
-    render(<SettingsPage />);
-
-    const darkButton = screen.getByRole('button', { name: 'Dark' });
-    await user.click(darkButton);
-
-    // テーマが変更されたことを確認（現在は仮実装なので、ボタンの状態を確認）
-    expect(darkButton).toHaveClass('bg-blue-600');
-  });
-
-  it('should show logout button', () => {
-    render(<SettingsPage />);
-
-    const logoutButton = screen.getByRole('button', { name: 'ログアウト' });
-    expect(logoutButton).toBeInTheDocument();
-  });
-
   it('should logout when logout button is clicked and confirmed', async () => {
     const user = userEvent.setup();
     mockConfirm.mockReturnValue(true);

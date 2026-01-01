@@ -82,35 +82,6 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          {/* テーマ設定セクション */}
-          <section className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 p-6">
-            <h3 className="text-lg font-semibold mb-4 text-black dark:text-zinc-50">
-              テーマ設定
-            </h3>
-            <div className="flex gap-3">
-              <button
-                onClick={() => handleThemeChange("light")}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  theme === "light"
-                    ? "bg-blue-600 text-white"
-                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                }`}
-              >
-                Light
-              </button>
-              <button
-                onClick={() => handleThemeChange("dark")}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  theme === "dark"
-                    ? "bg-blue-600 text-white"
-                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                }`}
-              >
-                Dark
-              </button>
-            </div>
-          </section>
-
           {/* ログアウトセクション */}
           <section className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 p-6">
             <h3 className="text-lg font-semibold mb-4 text-black dark:text-zinc-50">
